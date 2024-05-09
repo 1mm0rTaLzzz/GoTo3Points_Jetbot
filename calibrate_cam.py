@@ -1,37 +1,92 @@
+import cv2
 import numpy as np
-import cv2 as cv
+import os
 import glob
 
-# termination criteria
-criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+# Define the dimensions of checkerboard
+CHECKERBOARD = (6, 8)
 
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-objp = np.zeros((6 * 7, 3), np.float32)
-objp[:, :2] = np.mgrid[0:7, 0:6].T.reshape(-1, 2)
+# stop the iteration when specified
+# accuracy, epsilon, is reached or
+# specified number of iterations are completed.
+criteria = (cv2.TERM_CRITERIA_EPS +
+            cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# Arrays to store object points and image points from all the images.
-objpoints = []  # 3d point in real world space
-imgpoints = []  # 2d points in image plane.
+# Vector for 3D points
+threedpoints = []
 
+# Vector for 2D points
+twodpoints = []
+
+#  3D points real world coordinates
+objectp3d = np.zeros((1, CHECKERBOARD[0]
+                      * CHECKERBOARD[1],
+                      3), np.float32)
+objectp3d[0, :, :2] = np.mgrid[0:CHECKERBOARD[0],
+                      0:CHECKERBOARD[1]].T.reshape(-1, 2)
+prev_img_shape = None
+
+# Extracting path of individual image stored
+# in a given directory. Since no path is
+# specified, it will take current directory
+# jpg files alone
 images = glob.glob('*.jpg')
 
-for fname in images:
-    img = cv.imread(fname)
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+for filename in images:
+    print(filename)
+    image = cv2.imread(filename)
+    grayColor = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ret, thresh1 = cv2.threshold(grayColor, 127, 255, cv2.THRESH_BINARY)
+
 
     # Find the chess board corners
-    ret, corners = cv.findChessboardCorners(gray, (7, 6), None)
+    # If desired number of corners are
+    # found in the image then ret = true
+    ret, corners = cv2.findChessboardCorners(
+        thresh1, CHECKERBOARD,
+        None)
 
-    # If found, add object points, image points (after refining them)
+    # If desired number of corners can be detected then,
+    # refine the pixel coordinates and display
+    # them on the images of checker board
     if ret == True:
-        objpoints.append(objp)
+        threedpoints.append(objectp3d)
 
-    corners2 = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-    imgpoints.append(corners2)
+        # Refining pixel coordinates
+        # for given 2d points.
+        corners2 = cv2.cornerSubPix(
+            grayColor, corners, (11, 11), (-1, -1), criteria)
 
-    # Draw and display the corners
-    cv.drawChessboardCorners(img, (7, 6), corners2, ret)
-    cv.imshow('img', img)
-    cv.waitKey(500)
+        twodpoints.append(corners2)
 
-cv.destroyAllWindows()
+        # Draw and display the corners
+        image = cv2.drawChessboardCorners(image,
+                                          CHECKERBOARD,
+                                          corners2, ret)
+
+    cv2.imshow('img', image)
+    cv2.waitKey(0)
+
+cv2.destroyAllWindows()
+
+h, w = image.shape[:2]
+
+# Perform camera calibration by
+# passing the value of above found out 3D points (threedpoints)
+# and its corresponding pixel coordinates of the
+# detected corners (twodpoints)
+ret, matrix, distortion, r_vecs, t_vecs = cv2.calibrateCamera(
+    threedpoints, twodpoints, grayColor.shape[::-1], None, None)
+
+# Displaying required output
+print(" Camera matrix:")
+print(matrix)
+
+print("\n Distortion coefficient:")
+print(distortion)
+
+print("\n Rotation Vectors:")
+print(r_vecs)
+
+print("\n Translation Vectors:")
+print(t_vecs)
