@@ -7,7 +7,7 @@ import numpy as np
 dictionary = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
 parameters = aruco.DetectorParameters()
 detector = aruco.ArucoDetector(dictionary, parameters)
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture("rtsp://root:pass@192.168.0.94/mjpeg")
 
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 448)
